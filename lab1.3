@@ -1,40 +1,18 @@
-import pyaudio
+import sounddevice as sd
 import numpy as np
 
-# Установите параметры для записи звука
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 44100
-CHUNK = 1024
+# Устанавливаем параметры аудио
+sample_rate = 44100  # частота дискретизации
+duration = 5  # длительность записи в секундах
 
-# Инициализация PyAudio
-p = pyaudio.PyAudio()
+# Чтение аудио с микрофона
+audio_data = sd.rec(int(sample_rate * duration), samplerate=sample_rate, channels=1, dtype='int16')
+sd.wait()
 
-# Открываем поток для записи аудио
-stream = p.open(format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                frames_per_buffer=CHUNK)
+# Преобразование данных в одномерный массив numpy
+audio_data = np.squeeze(audio_data)
 
-print("Listening...")
+# Рассчитываем уровень шума
+rms_value = np.sqrt(np.mean(audio_data ** 2))
 
-try:
-    while True:
-        # Считываем данные из потока
-        data = np.frombuffer(stream.read(CHUNK), dtype=np.int16)
-
-        # Рассчитываем средний уровень амплитуды
-        amplitude = np.mean(np.abs(data))
-
-        # Выводим уровень шума
-        print(f"Noise Level: {amplitude}")
-
-except KeyboardInterrupt:
-    print("Stopped by user")
-
-finally:
-    # Закрываем поток и завершаем PyAudio
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+print(f"Среднеквадратичное значение (RMS) уровня шума: {rms_value}")
