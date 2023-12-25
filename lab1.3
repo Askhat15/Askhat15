@@ -1,18 +1,33 @@
-import sounddevice as sd
-import numpy as np
+from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 
-# Устанавливаем параметры аудио
-sample_rate = 44100  # частота дискретизации
-duration = 5  # длительность записи в секундах
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///example.db'  # SQLite база данных в текущем каталоге
+db = SQLAlchemy(app)
 
-# Чтение аудио с микрофона
-audio_data = sd.rec(int(sample_rate * duration), samplerate=sample_rate, channels=1, dtype='int16')
-sd.wait()
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
 
-# Преобразование данных в одномерный массив numpy
-audio_data = np.squeeze(audio_data)
+    def __repr__(self):
+        return f'<User {self.username}>'
 
-# Рассчитываем уровень шума
-rms_value = np.sqrt(np.mean(audio_data ** 2))
+# Создаем таблицы в базе данных
+db.create_all()
 
-print(f"Среднеквадратичное значение (RMS) уровня шума: {rms_value}")
+@app.route('/')
+def index():
+    users = User.query.all()
+    return render_template('index.html', users=users)
+
+@app.route('/add_user', methods=['POST'])
+def add_user():
+    username = request.form['username']
+    new_user = User(username=username)
+    db.session.add(new_user)
+    db.session.commit()
+    return redirect(url_for('index'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
